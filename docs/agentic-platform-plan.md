@@ -60,7 +60,7 @@ MCP clients ─ OAuth/MCP ─────────┘                   │
                               └── optional private single-owner Compute Engine worker
 ```
 
-The UI, REST API, MCP server, restaurant connector, and agents must call the same application services. Authorization, validation, audit, idempotency, and business rules live there rather than in individual adapters.
+The browser UI reaches server application services only through authenticated route handlers or server actions. REST, MCP, restaurant, and agent adapters call those same server-only services. Authorization, validation, audit, idempotency, and business rules live there rather than in the browser, transport adapters, or repositories.
 
 ## Recommended stack
 
@@ -254,7 +254,8 @@ The Arc MCP server was authenticated with the user's Pro account. A fresh read-o
 | Simple member header               | `page-header`                | Free |
 | Simple task list                   | `sortable-data-table`        | Free |
 | Task filters                       | `filter-toolbar`             | Free |
-| Power-user navigation              | `workspace-sidebar`          | Pro  |
+| Initial application navigation     | `sidebar-rail`               | Pro  |
+| Future multi-workspace navigation  | `workspace-sidebar`          | Pro  |
 | Compact board                      | `project-board`              | Pro  |
 | Advanced Kanban                    | `kanban-board`               | Pro  |
 | Advanced inline task table         | `data-grid`                  | Pro  |
@@ -262,7 +263,8 @@ The Arc MCP server was authenticated with the user's Pro account. A fresh read-o
 | Discussion and history             | `comment-thread`, `timeline` | Free |
 | Global navigation/actions          | `command-palette`            | Free |
 | Auth0 entry launcher               | `sign-in`                    | Free |
-| Members and invitations            | `team-members`               | Pro  |
+| Members                            | `team-members`               | Pro  |
+| Bulk invitations                   | `invite-people`              | Pro  |
 | Roles and permission review        | `roles-permissions`          | Pro  |
 | Connected systems and API clients  | `integrations`               | Pro  |
 | Admin settings search              | `settings-command`           | Pro  |
@@ -279,8 +281,8 @@ Install Pro components through the token-gated Arc registry only. The registry t
 This is a React rebuild, not a CSS reskin of the current plain-JavaScript application. Apply Arc one behavior pattern at a time:
 
 1. Inventory each existing screen's behavior, states, keyboard actions, and responsive rules, then map it to an Arc block or an explicitly custom composition.
-2. Establish Arc foundation first: registry configuration, foundation CSS imported once, Geist or Inter, semantic color/spacing/radius tokens, and light/dark theme attributes.
-3. Migrate in slices: application shell, task list and filters, board, task drawer, then admin and agent surfaces. Replace each Arc demo data source with the shared application services.
+2. Establish Arc foundation first: registry configuration, foundation CSS imported once, Geist headings, Inter body text, semantic color/spacing/radius tokens, and light/dark theme attributes.
+3. Migrate in slices: application shell and one Focused task journey, board and task drawer, Advanced views, then Admin. Replace each Arc demo data source with the typed browser gateway; defer interactive agent surfaces until phase 5.
 4. After each slice, prove functional parity plus keyboard access, focus behavior, mobile layout, loading/empty/error states, dark mode, and reduced motion.
 5. Remove the corresponding legacy JavaScript and CSS only after that slice passes. Finish with Arc's implementation checklist and repository-wide accessibility tests.
 
@@ -341,51 +343,62 @@ Some implementation details must change for multi-user correctness: embedded sub
 
 ## Delivery sequence and proof
 
-### 0. Inputs and parameterized cloud bootstrap
+### UI-first implementation strategy
+
+Build and approve the product experience before connecting production identity, persistence, and external systems. This is not a disposable visual prototype: establish the production Next.js/TypeScript/Arc application, routing, accessibility, responsive behavior, and component composition around a small typed browser gateway. A deterministic fixture implementation exercises that gateway until an authenticated server-backed implementation replaces it.
+
+UI components must not import fixture data, server application services, repositories, Auth0, or database types. The production browser gateway calls authenticated route handlers or server actions; those adapters call separate server-only application services and repositories. Browser storage may retain presentation preferences and failed form drafts, but it is never the task source of truth. A local-only scenario switcher may simulate role, mode, data volume, errors, restaurant provenance, and inert agent identity; it must not ship as a production access control.
+
+This order lets users validate Focused, Advanced, and Admin workflows early while preserving a clean path to Auth0, PostgreSQL, REST, MCP, and restaurant integration. The shared service contracts and representative fixtures are the boundary that prevents the UI-first phase from becoming throwaway work.
+
+### 0. UI contract and behavior capture
 
 - Preserve the confirmed upstream and Arc rights record and required notices.
+- Tag the existing prototype state and retain it as behavioral reference.
+- Add characterization journeys for critical existing behavior before replacing it.
+- Adopt `design-system/gr8r-studio/MASTER.md` as the UI contract and define the Focused, Advanced, and Admin information architecture.
+- Record navigation, task/project lifecycle, assignment, onboarding, invitation, restaurant-provenance, and agent-state behavior.
+- Record the state/recovery matrix and the accepted role/capability boundary.
+
+Proof: the characterization journeys pass against the prototype; every primary surface has a component mapping and state contract; open infrastructure inputs do not block UI implementation.
+
+### 1. Production frontend with fixture services
+
+- Establish the Next.js/TypeScript application, route groups, and Arc foundation.
+- Create a typed browser-gateway interface plus a deterministic in-memory fixture implementation.
+- In the first pull request, build the responsive shell and one complete Focused My tasks journey, including task detail or completion through the gateway.
+- In follow-up UI slices, add the project board and drawer, Advanced views and filters, then representative Admin people/roles/integration surfaces.
+- Cover loading, empty, denied, partial failure, conflict, long-content, and restaurant-provenance scenarios. Defer interactive agent-run and approval UI until phase 5.
+- Add a local/test-only scenario switcher for role, experience mode, data state, and service outcome.
+- Keep the legacy application intact until each replacement slice proves its behavior.
+
+Proof: each agreed journey passes against the fixture gateway at 390, 768, 1024, and 1440px; keyboard, automated accessibility, light/dark, and reduced-motion checks pass; components have no direct dependency on fixtures, Auth0, server services, or persistence.
+
+### 2. Identity, persistence, and Google Cloud foundation
+
 - Record `GCP_PROJECT_ID`, `GCP_REGION`, and `GOOGLE_WORKSPACE_DOMAIN` as configuration values; the last may remain unset until supplied.
 - Add parameterized Terraform for required APIs, service accounts/IAM, Artifact Registry, Secret Manager, Cloud Run, Cloud SQL, Cloud Storage, and observability.
 - Configure GitHub-to-Google Workload Identity Federation so CI uses short-lived credentials and no service-account JSON key.
-- Create the Auth0 tenant, application, API, first Organization, and test identities. Keep public signup disabled; defer the Workspace enterprise connection and Directory Sync until the real domain is supplied.
-- Record the accepted role/capability matrix and integration boundary.
-
-Proof: Terraform validates and plans; CI builds an immutable image without a long-lived Google key; leaving the Workspace domain unset neither blocks local/non-production work nor enables public signup.
-
-### 1. Characterization and foundation
-
-- Tag the existing prototype state.
-- Add Playwright journeys for critical existing behavior.
-- Establish the Next.js/TypeScript application and Arc foundation.
-- Add PostgreSQL migrations, the Auth0 Next.js SDK, Auth0 Organization/RBAC, workspace scoping, composite tenant-integrity constraints, and policy tests.
-- Create the shared application-service interfaces used by UI, REST, and MCP.
+- Add PostgreSQL migrations, workspace scoping, composite tenant-integrity constraints, immutable audit records, and policy tests.
+- Add the Auth0 Next.js SDK, first Organization, Organization/RBAC enforcement, server-side Management API boundary, and test identities. Keep public signup disabled; defer the Workspace enterprise connection and Directory Sync until the real domain is supplied.
+- Implement server-only application services and repository interfaces behind authenticated route handlers/server actions. Do not replace UI fixture adapters in this phase.
 - Establish the Cloud Run application, migration job, Cloud SQL, private Storage bucket, scoped secrets, logging, and HTTPS ingress without relying on instance-local state.
 
-Proof: baseline journeys run against the prototype; test organization login, organization-role claims, and negative cross-workspace database/policy tests pass; the runtime identity cannot perform schema migrations; protected data survives replacement and concurrent Cloud Run instances.
+Proof: Terraform validates and plans; CI builds an immutable image without a long-lived Google key; test organization login, role claims, and negative cross-workspace database/policy tests pass; the runtime identity cannot perform schema migrations; leaving the Workspace domain unset neither blocks non-production work nor enables public signup.
 
-### 2. Production vertical slice
+### 3. Production core and functional parity
 
 - Bootstrap-owner and invited-member onboarding through Auth0 Universal Login, with returning members bypassing setup.
-- Member/admin management through server-side Auth0 Management API calls.
-- Project and task CRUD.
-- Focused task list, Kanban, task drawer, comments, assignments, and activity.
-- A scoped Auth0 machine-to-machine restaurant actor and first idempotent task-create endpoint, exercised from an external-client fixture.
-- Server-enforced roles, immutable audit events, real persistence, and signed attachment upload.
+- Implement the production browser gateway and replace fixture-backed user-workspace slices one at a time.
+- Wire project/task CRUD, Focused and Advanced views, comments, assignments, activity, signed attachments, dashboard, inbox/notifications, search, saved views, bulk actions, calendar, timeline, dependencies, recurrence, archive, and templates to production services.
+- Add a scoped Auth0 machine-to-machine restaurant actor and first idempotent task-create endpoint, exercised from an external-client fixture.
+- Preserve server-enforced roles, versions/conflict recovery, tenant integrity, and immutable audit events while replacing all user-workspace fixture paths. Admin fixture paths remain for phase 4.
 
-Proof: two users with different roles see and can mutate only authorized data; refresh and concurrent sessions retain consistent task state; repeated restaurant delivery produces exactly one domain effect; signed attachment access cannot cross workspaces.
-
-### 3. Functional parity and advanced UI
-
-- Dashboard, inbox/notifications, search, saved views, bulk actions.
-- Table, calendar, timeline, files, dependencies, recurrence, archive, and project templates.
-- Focused/advanced mode switching, accessibility, responsive behavior, and keyboard flows.
-- Complete the loading, empty, denied, partial-failure, conflict, and draft-recovery state contract.
-
-Proof: the agreed parity checklist passes end-to-end with production data and recovery states; Cloud Run restart/scale does not lose sessions or authorization-sensitive state; version conflicts preserve local work for reapply.
+Proof: two users with different roles see and mutate only authorized data; the agreed parity and recovery-state checklist passes end-to-end with production data; refresh, concurrent sessions, and Cloud Run replacement retain consistent state; repeated restaurant delivery produces exactly one domain effect; attachment access cannot cross workspaces; version conflicts preserve local work for reapply.
 
 ### 4. Admin, integrations, REST, and MCP
 
-- Admin control plane using Arc's member, role, and integration blocks with server-side Auth0 Management API operations.
+- Replace Admin fixture paths with server-side Auth0 Management API operations and application services, including members, invitations, teams, roles, integrations, audit, and settings.
 - OpenAPI-backed REST endpoints and Auth0 machine-to-machine clients with scoped application actor mappings.
 - Complete the restaurant connector, provenance UI, and monotonic change feed consumed directly by its Kanban.
 - Auth0 Auth for MCP protection over the same authorized services.
@@ -418,6 +431,7 @@ Proof: restore into a separate database instance, expand/contract migration comp
 | Risk                                            | Control                                                                                                                                                           |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rewrite loses subtle behavior                   | Characterization journeys and an explicit parity checklist before deleting legacy code.                                                                           |
+| Fixture-backed UI drifts from production        | A small typed browser gateway plus contract tests run against both fixture and authenticated server-backed implementations.                                       |
 | UI-only role checks expose data                 | Central policy service, workspace-scoped queries, and negative authorization tests.                                                                               |
 | Board moves conflict                            | Transactional ordering plus optimistic concurrency.                                                                                                               |
 | External systems create duplicates/stale writes | Idempotency records, external mappings, versions/ETags, and auditable conflict responses.                                                                         |
@@ -454,7 +468,7 @@ Recommended defaults are included so implementation can start quickly.
 10. **Compliance, region, and recovery — pending:** EU data residency, deletion/retention, production region, RTO, and RPO must be supplied before production cutover. Terraform remains region-parameterized and stateful services are co-located when selected.
 11. **Existing data — working default:** treat browser-local prototype data as demo data unless a real export is later identified.
 
-Foundation work can start without the Google Workspace domain. The domain is required only for production identity-policy validation and cutover, not for the schema, UI, API, MCP, or parameterized cloud platform. The first implementation pull request should contain the tested Next.js/Arc foundation, Auth0/schema skeleton, and one end-to-end project/task vertical slice rather than a visual-only rewrite. The agent phase remains gated on the pending authority decision.
+UI work can start without the Google Workspace domain. The domain is required only for production identity-policy validation and cutover, not for the UI, schema, API, MCP, or parameterized cloud platform. The first implementation pull request should contain the tested Next.js/Arc foundation, typed browser gateway, deterministic fixture implementation, responsive shell, and one complete Focused task journey. Board, Advanced, and Admin fixture-backed slices follow before Auth0, schema, and Google Cloud integration. The agent phase remains gated on the pending authority decision.
 
 ## Primary references
 
