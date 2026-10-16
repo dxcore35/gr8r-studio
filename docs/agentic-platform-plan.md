@@ -1,8 +1,8 @@
 # Gr8r agentic work platform rebuild plan
 
-Status: Draft for product decisions  
-Date: 2026-10-16  
-Planning branch: `plan/agentic-platform`
+- Status: Approved architecture baseline; Google Workspace domain and agent authority pending
+- Date: 2026-10-16
+- Planning branch: `plan/agentic-platform`
 
 ## Outcome
 
@@ -14,7 +14,7 @@ Rebuild Gr8r Studio as a production task and project platform that:
 - signs people in with Google Workspace and supports invitations, user management, roles, and privileges;
 - gives regular members a focused interface, power users advanced controls, and admins a dedicated control plane;
 - lets people, agents, and external systems create and update centrally managed tasks;
-- exposes a versioned REST API, signed webhooks, and an OAuth-protected remote MCP server;
+- exposes a versioned REST API and an OAuth-protected remote MCP server, with webhooks deferred until a real push-integration need exists;
 - can add durable agent execution without coupling the task database to one agent runtime.
 
 ## What the current repository actually is
@@ -31,23 +31,23 @@ The current application is a high-fidelity browser prototype, not a production b
 
 Therefore, “preserve the backend” means preserving domain behavior and product functionality while creating the real backend. The local-state implementation is not safe to retain for multiple users.
 
-Important legal gates: the upstream repository currently has no detected `LICENSE` file or GitHub license metadata, and the new fork is public. Before implementation, confirm the owner's rights grant and Arc Pro's source-distribution terms. Do not push Arc Pro source into the public fork unless those terms explicitly permit it; otherwise continue development in a private derived repository while preserving upstream history and required notices.
+Decision recorded 2026-10-16: the owner confirmed the required rights to modify and deploy the upstream source and to use Arc Pro in this repository. Preserve all required upstream and Arc notices and keep the Arc registry credential out of source control.
 
 ## Recommended architecture
 
 ```text
 People in browser ───────────────┐
-Restaurant system ─ REST/webhook ├──> Vercel application
-MCP clients ─ OAuth/MCP ─────────┘      ├── Authentication and policy
+Restaurant system ─ REST API ────┼──> Vercel application
+MCP clients ─ OAuth/MCP ─────────┘      ├── Auth0 identity and policy
                                          ├── Task / Project services
                                          ├── Integration service
                                          ├── Agent service
                                          └── API adapters
                                                 │
-                       ┌────────────────────────┼───────────────────────┐
-                       ▼                        ▼                       ▼
-                PostgreSQL                 Blob storage          Durable outbox
-              system of record             attachments          + webhooks
+                                  ┌─────────────┴─────────────┐
+                                  ▼                           ▼
+                           PostgreSQL                    Blob storage
+                         system of record                attachments
                        │
                        ▼
                   AgentRuntime
@@ -60,18 +60,18 @@ The UI, REST API, MCP server, restaurant connector, and agents must call the sam
 
 ## Recommended stack
 
-| Concern         | Choice                                                                          | Reason                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Web application | Next.js App Router, React, TypeScript                                           | Arc is React-based; Next.js fits Vercel, server rendering, route handlers, and authenticated layouts.                       |
-| UI system       | Arc foundation plus selected free and Pro components                            | Source-owned components, consistent tokens, responsive behavior, accessibility notes, and strong task/admin blocks.         |
-| Authentication  | Better Auth with Google, organization, admin, JWT, MCP, and CIMD plugins        | Separates Google identity, workspace membership, platform administration, and MCP OAuth 2.1 authorization.                  |
-| Database        | Managed PostgreSQL through a Vercel integration; Drizzle for schema and queries | Portable, relational, transaction-friendly, and appropriate for task relationships, authorization, audit, and integrations. |
-| Files           | Vercel Blob or an S3-compatible store                                           | The current upload flow stores only fake metadata; production needs actual object storage and signed access.                |
-| API             | Next.js route handlers backed by the application-service layer                  | Keeps web and integration behavior in one deployable application without making UI code the policy boundary.                |
-| Background work | Vercel Workflows and `WorkflowAgent` behind `AgentRuntime`                      | Resumable, observable execution and durable approval on the requested hosting platform.                                     |
-| Tests           | Vitest for domain/policy tests and Playwright for critical journeys             | The rewrite needs behavioral parity and authorization proof, not visual similarity alone.                                   |
+| Concern         | Choice                                                                             | Reason                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Web application | Next.js App Router, React, TypeScript                                              | Arc is React-based; Next.js fits Vercel, server rendering, route handlers, and authenticated layouts.                       |
+| UI system       | Arc foundation plus selected free and Pro components                               | Source-owned components, consistent tokens, responsive behavior, accessibility notes, and strong task/admin blocks.         |
+| Authentication  | Auth0 with Google Workspace, Organizations, Directory Sync, RBAC, and Auth for MCP | Managed employee identity, organization membership, user administration, API authorization, and MCP OAuth in one provider.  |
+| Database        | Managed PostgreSQL through a Vercel integration; Drizzle for schema and queries    | Portable, relational, transaction-friendly, and appropriate for task relationships, authorization, audit, and integrations. |
+| Files           | Vercel Blob or an S3-compatible store                                              | The current upload flow stores only fake metadata; production needs actual object storage and signed access.                |
+| API             | Next.js route handlers backed by the application-service layer                     | Keeps web and integration behavior in one deployable application without making UI code the policy boundary.                |
+| Background work | Vercel Workflows and `WorkflowAgent` behind `AgentRuntime`                         | Resumable, observable execution and durable approval on the requested hosting platform.                                     |
+| Tests           | Vitest for domain/policy tests and Playwright for critical journeys                | The rewrite needs behavioral parity and authorization proof, not visual similarity alone.                                   |
 
-Provider-specific code should stay behind small adapters so Postgres, object storage, email delivery, and agent execution can change without rewriting the product.
+Provider-specific code should stay behind small adapters so identity administration, Postgres, object storage, email delivery, and agent execution can change without rewriting the product. Token verification remains a mandatory request-boundary concern rather than a swappable business rule.
 
 ## Identity, roles, and interface modes
 
@@ -81,7 +81,7 @@ Use one auditable actor concept for anything that can create, change, comment on
 
 - `human` — linked to an authenticated user and workspace membership;
 - `agent` — linked to an agent definition and scoped runtime credential;
-- `integration` — linked to a service account, API key, or OAuth client.
+- `integration` — linked to an Auth0 machine-to-machine client or another approved OAuth client.
 
 Tasks should record `createdByActorId`; assignments should point to actors; activity and audit events should always record the actor. An agent must never impersonate a human session.
 
@@ -89,13 +89,15 @@ Tasks should record `createdByActorId`; assignments should point to actors; acti
 
 Use one canonical record for each concept:
 
-- Better Auth core owns users, Google accounts, and sessions.
-- One Better Auth organization maps one-to-one to one application workspace. The organization plugin's members, invitations, teams, and organization roles are the canonical workspace membership records; do not create parallel membership tables.
+- Auth0 owns identities, the Google Workspace enterprise connection, login, sessions/tokens, organization membership, invitations, and organization-role assignments. The Next.js Auth0 SDK handles the application's server-side session.
+- Configure the Google Workspace connection to use Google's stable identity ID rather than email for the Auth0 user ID. Persist the Auth0 `sub` as the external identity key; email is a mutable profile attribute, never a foreign key.
+- One Auth0 Organization maps one-to-one to one application workspace. The first release creates one company organization and hides workspace switching, while every domain record remains workspace-scoped so more companies can be added without a schema rewrite.
+- Auth0 Google Workspace Directory Sync imports employee profiles and selected groups. Disable Membership on Authentication: a synchronized identity is not automatically authorized, and access still requires organization membership or an invitation. Google groups influence authorization only through an explicit reviewed mapping from stable group IDs.
 - Application project memberships and policy rules narrow what a workspace member can do inside each project.
-- Workspace Owner/Admin are organization roles. They manage their workspace but do not receive platform-wide authority.
-- Better Auth's admin plugin is reserved for a separate platform-operator role that can manage user accounts and incidents across workspaces. It is not the implementation of workspace Admin.
+- Workspace Owner/Admin are Auth0 organization-member roles with Auth0 API permissions. They manage their workspace but do not receive platform-wide authority.
+- A dedicated tenant-level Auth0 role grants platform-operator access and is limited to the small set of accounts that can manage cross-workspace incidents. Platform routes require a non-organization admin session and verify the subject's tenant-level role server-side through the Auth0 Management API, with short-lived caching only if needed; organization role claims never satisfy this check.
 
-The normal admin interface described below is workspace administration. Platform operations should live on a separately guarded route and remain invisible to ordinary workspace admins.
+The normal admin interface described below is workspace administration. Its server routes derive the target Auth0 Organization from the validated session, then call the Auth0 Management API with a least-privileged machine credential. They never trust an arbitrary organization ID from the browser, and the Management API credential is never sent to the browser. Platform operations live on a separately guarded route and remain invisible to ordinary workspace admins.
 
 ### Initial workspace roles
 
@@ -117,7 +119,7 @@ Permissions and interface complexity are separate concepts.
 
 - **Focused mode**: My tasks, Today, a simple project board/list, task details, comments, completion, and create-task actions.
 - **Advanced mode**: workspace-wide views, data grid, saved filters, bulk actions, timeline/calendar, reports, command palette, API access, and integration tools when permitted.
-- **Admin control plane**: people, invitations, teams, roles, agents, API keys, webhooks, audit, retention, and workspace settings.
+- **Admin control plane**: people, invitations, teams, roles, agents, API clients, audit, retention, and workspace settings.
 
 Store an `experienceMode` preference per membership. Default it from the role, allow an eligible user to switch modes, and keep the same authorization rules underneath both.
 
@@ -125,13 +127,15 @@ Store an `experienceMode` preference per membership. Default it from the role, a
 
 The schema should be multi-workspace capable even if the first deployment exposes only one workspace.
 
-| Area        | Core records                                                                                                                  |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Identity    | Better Auth user/account/session/organization/member/invitation/team; one-to-one workspace profile; project membership; actor |
-| Work        | project, project membership, task, task assignment, dependency, label, comment, attachment, saved view                        |
-| History     | activity event, security audit event, notification                                                                            |
-| Integration | integration connection, service credential, external link, idempotency record, webhook subscription/delivery, outbox event    |
-| Agents      | agent definition, agent grant, agent run, run event, approval request, runtime mapping                                        |
+| Area        | Core records                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Identity    | Auth0 subject/organization/role references; one-to-one workspace profile; project membership; actor                      |
+| Work        | project, project membership, task, task assignment, dependency, label, comment, attachment, saved view                   |
+| History     | activity event, security audit event, notification                                                                       |
+| Integration | Auth0 machine-client-to-actor mapping, integration connection, external link, idempotency record, synchronization cursor |
+| Agents      | agent definition, agent grant, agent run, run event, approval request, runtime mapping                                   |
+
+Store one unique `auth0OrganizationId` on the workspace and one immutable Auth0 `sub` on each human actor profile. Other domain tables reference the internal `workspaceId`; do not copy Auth0 identifiers through every task table.
 
 Recommended task fields include workspace/project IDs, stable public key, title, structured description, status, priority, start/due timestamps, estimate, recurrence rule, parent task, ordering token, version, archive timestamp, creator actor, source system, and external ID.
 
@@ -139,7 +143,7 @@ Use a task-assignment table even if the first UI shows one accountable owner. Th
 
 Do not preserve raw, unsanitized HTML descriptions from the prototype. Use sanitized Markdown or a structured editor document.
 
-## REST API, webhooks, and MCP
+## REST API and MCP
 
 ### REST API
 
@@ -149,17 +153,15 @@ Start with a versioned `/api/v1` surface:
 - tasks: list, read, create, update, assign, move, archive;
 - comments and attachments;
 - members and invitations for authorized admins;
-- agent runs and approval decisions;
-- webhook subscriptions and delivery inspection.
+- agent runs and approval decisions once agent capabilities are approved.
 
 Requirements:
 
-- scoped service credentials rather than shared user cookies;
+- Auth0 machine-to-machine clients with narrow API scopes rather than shared user cookies or application-owned passwords;
 - `Idempotency-Key` on writes from integrations and agents;
 - stable error codes and an OpenAPI document;
 - cursor pagination and explicit filtering;
 - optimistic concurrency for mutations;
-- signed webhooks with delivery records and retry handling;
 - per-actor audit entries for every privileged or destructive operation.
 
 ### Remote MCP server
@@ -173,34 +175,34 @@ Expose a remote HTTP MCP endpoint over the same service layer. Initial tools sho
 - `update_task`
 - `assign_task`
 - `add_comment`
-- `start_agent_run`
-- `get_agent_run`
 
-Google sign-in establishes the person's identity; it is not by itself an MCP authorization server. Target MCP `2026-07-28` and use Better Auth's `mcp()`, `jwt()`, and `cimd()` plugins with the `mcp-2026-07-28` metadata profile:
+Agent-run tools remain disabled until the owner approves concrete agent capabilities and approval rules.
 
-- configure one canonical HTTPS MCP resource identifier and publish RFC 9728 protected-resource metadata plus authorization-server discovery;
-- use authorization code with PKCE for user-delegated clients, Client ID Metadata Documents for registration, and enable Dynamic Client Registration only as an explicit legacy compatibility path;
-- require the resource indicator in authorization and token requests so access tokens are audience-bound to this MCP server;
-- validate signature, issuer, audience, expiry, and DPoP proof when a token is proof-of-possession bound;
-- map OAuth scopes for project/task read, task/comment write, agent-run start, and integration administration to the same application permission service used by REST and UI;
+Target MCP `2026-07-28` and use Auth0 Auth for MCP as the OAuth authorization server while the Vercel MCP route remains the protected resource server:
+
+- register the canonical HTTPS MCP URL as an Auth0 API/resource identifier, enable the Resource Parameter Compatibility Profile and Include Issuer in Authorization Responses, and use Auth0's RFC 9068 authorization access-token profile;
+- publish RFC 9728 protected-resource metadata from the MCP server and Auth0 authorization-server discovery from the configured Auth0 domain;
+- use authorization code with PKCE for user-delegated clients, enable Auth0's Client ID Metadata Document Registration tenant setting, and approve each Client ID Metadata Document client administratively; keep open Dynamic Client Registration disabled unless a specific legacy client requires it;
+- promote the Google Workspace connection to domain level for approved third-party MCP clients, grant those clients the task API explicitly, and permit them for the company Organization;
+- require the resource indicator so access tokens are audience-bound to this MCP server, and reject tokens without the expected Auth0 issuer, audience, expiry, organization context, and permissions;
+- enable Auth0 RBAC and include permissions in access tokens;
+- map OAuth scopes for project/task read, task/comment write, and integration administration to the same application permission service used by REST and UI;
 - return scope-aware `WWW-Authenticate` challenges so clients can request only the access they need.
 
-A valid token is only the outer authorization ceiling. Every tool call must still resolve the actor and workspace, then pass exactly the same project-level policy checks as the equivalent REST or UI action. Do not expose raw database, shell, or filesystem access to ordinary workplace agents. Pin and verify the Better Auth MCP packages at implementation time because the MCP authorization profile is evolving.
+A valid Auth0 token is only the outer authorization ceiling. Every tool call must still resolve the actor and workspace, then pass exactly the same project-level policy checks as the equivalent REST or UI action. Do not expose raw database, shell, or filesystem access to ordinary workplace agents.
 
 ## Restaurant-system integration
 
 The task platform should remain the source of truth.
 
 1. Give the restaurant system a scoped integration actor restricted to its project(s).
-2. It creates or upserts tasks through `/api/v1/tasks` using `sourceSystem`, `externalId`, and an idempotency key.
-3. The task platform commits the task and an outbox event in one database transaction.
-4. A short Vercel Function dispatcher, invoked after writes and by a scheduled Vercel Cron reconciliation, claims pending outbox rows with a transactional lease and publishes them to Vercel Queues using the outbox ID as the idempotency key. It never holds a database transaction open across the network call.
-5. Queue consumers deliver signed webhooks, record each attempt, and rely on at-least-once retry. Consumers are idempotent; exhausted or permanently invalid deliveries move to an application-owned failed-delivery state for admin inspection and replay.
-6. The restaurant Kanban either reads a filtered task endpoint directly or maintains a projection from those webhooks.
-7. Status changes from the restaurant board return through the same API with the current version/ETag.
-8. Origin and version metadata prevent webhook echo loops and lost updates. Expired dispatcher leases and unpublished rows are reclaimed by reconciliation.
+2. Represent it as an Auth0 machine-to-machine application. Map its Auth0 client ID to the integration actor and allowed projects in the application database; Auth0 scopes are a ceiling, not the project authorization rule.
+3. It creates or upserts tasks through `/api/v1/tasks` using `sourceSystem`, `externalId`, and an idempotency key.
+4. Its Kanban reads canonical tasks directly through a filtered, cursor-paginated endpoint and can request only records changed since its last synchronization cursor.
+5. Status changes return through the same API with the current version/ETag so stale clients receive an explicit conflict instead of overwriting newer work.
+6. Every request records the integration actor, source, external ID, and audit event.
 
-This keeps tasks centrally managed while allowing the restaurant product to show a purpose-built local board.
+This direct API model keeps tasks centrally managed and is the selected first implementation. Add signed webhooks and an outbox only if a future integration demonstrates a real push-delivery requirement.
 
 ## Arc component plan
 
@@ -218,17 +220,18 @@ The Arc MCP server was authenticated with the user's Pro account. A fresh read-o
 | Task details                       | `drawer`                     | Free |
 | Discussion and history             | `comment-thread`, `timeline` | Free |
 | Global navigation/actions          | `command-palette`            | Free |
-| Google entry screen                | `sign-in`                    | Free |
+| Auth0 entry launcher               | `sign-in`                    | Free |
 | Members and invitations            | `team-members`               | Pro  |
 | Roles and permission review        | `roles-permissions`          | Pro  |
-| Connected systems                  | `integrations`               | Pro  |
+| Connected systems and API clients  | `integrations`               | Pro  |
 | Admin settings search              | `settings-command`           | Pro  |
-| Developer credentials              | `api-keys`, `webhooks`       | Pro  |
 | Live agent execution and approvals | `agent-run`                  | Pro  |
 
 Arc supplies presentation and interaction behavior, not application security or persistence. Task details, assignee selection, role-aware navigation, and project-specific workflows still require product composition around the Arc primitives.
 
-Install Pro components through the token-gated Arc registry only. The registry token is a development or CI installation secret, not an application runtime secret; do not add it to the deployed Vercel environment unless a reviewed build step actually fetches registry source. Preserve Arc's copyright/license notices, and do not apply any repository-wide open-source license to Arc Pro files. Because this fork is public, the legal gate above must be resolved before any Pro source is committed.
+Use Arc's `sign-in` block only as the branded “Continue with Google Workspace” launcher into Auth0 Universal Login. Do not collect Google credentials or implement a second local login flow in the application.
+
+Install Pro components through the token-gated Arc registry only. The registry token is a development or CI installation secret, not an application runtime secret; do not add it to the deployed Vercel environment unless a reviewed build step actually fetches registry source. Preserve Arc's copyright/license notices and the rights record noted above.
 
 ### Arc migration method
 
@@ -290,32 +293,31 @@ Some implementation details must change for multi-user correctness: embedded sub
 
 ## Delivery sequence and proof
 
-### 0. Decisions and legal gate
+### 0. Confirmed inputs and remaining configuration
 
-- Confirm source-code rights.
-- Confirm Arc Pro redistribution terms and choose a permitted repository visibility before installing Pro source.
-- Resolve the product questions below.
+- Preserve the confirmed upstream and Arc rights record and required notices.
+- Record the allowed Google Workspace domain and create the Auth0 tenant, application, API, Google Workspace enterprise connection, and first Organization.
 - Record the accepted role/capability matrix and integration boundary.
 
-Proof: decisions are documented and no unresolved choice changes the data or deployment architecture.
+Proof: Auth0 and deployment configuration inputs are documented, and a test user completes Google Workspace login in the expected Auth0 Organization while a strict administrator-approved CIMD client obtains an organization-bound MCP token for the canonical resource.
 
 ### 1. Characterization and foundation
 
 - Tag the existing prototype state.
 - Add Playwright journeys for critical existing behavior.
 - Establish the Next.js/TypeScript application and Arc foundation.
-- Add PostgreSQL migrations, Better Auth, workspace scoping, and policy tests.
+- Add PostgreSQL migrations, the Auth0 Next.js SDK, Google Workspace connection, Auth0 Organization, Directory Sync, RBAC, workspace scoping, and policy tests.
 - Create the shared application-service interfaces used by UI, REST, and MCP.
 
-Proof: baseline journeys run against the prototype; Google-domain login and cross-workspace isolation tests pass in the new foundation.
+Proof: baseline journeys run against the prototype; invited Google Workspace login, organization-role claims, and cross-workspace isolation tests pass in the new foundation.
 
 ### 2. Production vertical slice
 
-- Workspace onboarding and invited Google sign-in.
-- Member/admin management.
+- Single-company workspace onboarding and invited Google sign-in through Auth0 Universal Login.
+- Member/admin management through server-side Auth0 Management API calls.
 - Project and task CRUD.
 - Focused task list, Kanban, task drawer, comments, assignments, and activity.
-- A scoped restaurant integration actor and first idempotent task-create endpoint, exercised from an external-client fixture.
+- A scoped Auth0 machine-to-machine restaurant actor and first idempotent task-create endpoint, exercised from an external-client fixture.
 - Server-enforced roles, audit events, and real persistence.
 
 Proof: two users with different roles see and can mutate only authorized data; refresh and concurrent sessions retain consistent task state; repeated delivery of one restaurant request produces exactly one canonical task visible in the focused UI.
@@ -330,14 +332,16 @@ Proof: the agreed parity checklist passes end-to-end with production data, loadi
 
 ### 4. Admin, integrations, REST, and MCP
 
-- Admin control plane using Arc's member, role, integration, API-key, and webhook blocks.
-- OpenAPI-backed REST endpoints, scoped service accounts, webhook outbox/deliveries.
-- Complete the restaurant connector, outbox/queue dispatcher, signed webhooks, delivery inspection, and central Kanban projection.
-- OAuth-protected remote MCP server using the same authorized services.
+- Admin control plane using Arc's member, role, and integration blocks with server-side Auth0 Management API operations.
+- OpenAPI-backed REST endpoints and Auth0 machine-to-machine clients with scoped application actor mappings.
+- Complete the restaurant connector and filtered central-task API consumed directly by its Kanban.
+- Auth0 Auth for MCP protection over the same authorized services.
 
-Proof: the restaurant projection converges after retries without echo loops; authorized REST and MCP calls have identical outcomes; unauthorized calls are denied and audited.
+Proof: the restaurant Kanban reads the canonical task and updates it with concurrency protection; authorized REST and MCP calls have identical outcomes; unauthorized calls are denied and audited.
 
 ### 5. Agents and durable execution
+
+Do not begin this phase until the owner approves the first agent actions and their human-approval boundaries.
 
 - Agent definitions, grants, assignments, run history, progress, outputs, and approval records.
 - `AgentRuntime` with Vercel Workflows and `WorkflowAgent` first.
@@ -356,47 +360,54 @@ Proof: production checklist, restore drill, authorization test suite, accessibil
 
 ## Main risks and controls
 
-| Risk                                            | Control                                                                                                                  |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Upstream has no detected license                | Obtain written permission or a license before implementation and commercial deployment.                                  |
-| Public fork could redistribute Arc Pro source   | Confirm Arc terms first or move implementation to a private derived repository; preserve notices and license boundaries. |
-| Rewrite loses subtle behavior                   | Characterization journeys and an explicit parity checklist before deleting legacy code.                                  |
-| UI-only role checks expose data                 | Central policy service, workspace-scoped queries, and negative authorization tests.                                      |
-| Board moves conflict                            | Transactional ordering plus optimistic concurrency.                                                                      |
-| External systems create duplicates or loops     | Idempotency records, external mapping, transactional outbox, origin/version metadata.                                    |
-| Rich text introduces XSS                        | Sanitized Markdown or a structured document format.                                                                      |
-| Arc Pro token leaks                             | Development/CI secret only; never commit it or expose it to the deployed runtime by default.                             |
-| Agent runtime becomes infrastructure lock-in    | Small `AgentRuntime` port and product-owned run/approval records.                                                        |
-| Pi lifecycle gaps affect privacy or reliability | Keep it optional, external, exact-version pinned, and gated by the spike criteria.                                       |
-| Vercel Queues remains beta or MCP auth changes  | Pin verified versions behind adapters and keep provider replacement paths.                                               |
+| Risk                                            | Control                                                                                                                                                           |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rewrite loses subtle behavior                   | Characterization journeys and an explicit parity checklist before deleting legacy code.                                                                           |
+| UI-only role checks expose data                 | Central policy service, workspace-scoped queries, and negative authorization tests.                                                                               |
+| Board moves conflict                            | Transactional ordering plus optimistic concurrency.                                                                                                               |
+| External systems create duplicates/stale writes | Idempotency records, external mappings, versions/ETags, and auditable conflict responses.                                                                         |
+| Auth0 Management API privilege leaks            | Server-only least-privileged machine credential; never expose it to the browser; monitor and rotate it.                                                           |
+| Auth0 plan omits a required B2B feature         | Verify Organizations, Google Directory Sync, Management API quotas, and Auth for MCP against the selected plan.                                                   |
+| Directory data and access policy drift          | Treat periodic sync as identity input, not instant revocation; require explicit organization membership, revoke urgent access directly, and monitor sync results. |
+| Rich text introduces XSS                        | Sanitized Markdown or a structured document format.                                                                                                               |
+| Arc Pro token leaks                             | Development/CI secret only; never commit it or expose it to the deployed runtime by default.                                                                      |
+| Agent runtime becomes infrastructure lock-in    | Small `AgentRuntime` port and product-owned run/approval records.                                                                                                 |
+| Pi lifecycle gaps affect privacy or reliability | Keep it optional, external, exact-version pinned, and gated by the spike criteria.                                                                                |
+| MCP authorization profile changes               | Pin verified Auth0/MCP SDK versions behind adapters and run discovery, scope, audience, and client-registration tests.                                            |
 
-## Product decisions required
+## Decisions and remaining inputs
 
 Recommended defaults are included so implementation can start quickly.
 
-1. **Code rights and visibility** — Do you own `gr8rstudio/gr8r-studio`, or have permission for commercial modification and deployment? May Arc Pro source be stored in a public repository? If not, the implementation must move from the public fork to a private derived repository. These are hard gates before implementation.
-2. **Google access policy** — Which Workspace domain(s) are allowed? Recommended: invitation required **and** a matching verified Workspace domain; no public signup.
-3. **Directory management** — Is app-owned invitation/user management enough, or must Google Admin directory/groups auto-provision and deactivate users? Recommended: app-owned users first; directory sync later.
-4. **Tenancy** — Is this only for one company, or will clients/restaurants receive separate workspaces? Recommended: multi-workspace schema with a single-workspace first UI.
-5. **Assignments** — Should a task have one accountable owner, multiple assignees, or owner plus collaborators? Recommended: one visible owner plus optional collaborators, backed by a flexible assignment table.
-6. **Restaurant integration** — What is its stack, where is it hosted, and can its Kanban read the central API directly? Recommended: this platform is canonical; the restaurant board is a filtered client/projection.
-7. **Hosting boundary** — Must every backend component run on Vercel, or is a separate agent worker acceptable? Recommended: all-Vercel first with `WorkflowAgent`; test Vercel's managed Pi harness path before considering a separate Pi Durable worker.
-8. **Agent authority** — Which first real tasks should an agent perform, and which actions require human approval? Recommended: begin with create/update/comment/draft operations; require approval for reassignment, deletion, external messages, and privileged changes.
-9. **Compliance and region** — Are EU data residency, GDPR deletion, retention periods, or audit retention requirements mandatory? This determines providers and the Pi decision.
-10. **Existing data** — Is any current browser-local prototype data valuable? Recommended: treat it as demo data unless a real export must be migrated.
+1. **Code rights and visibility — decided:** the owner confirmed the required upstream and Arc rights for this repository and deployment.
+2. **Identity provider — decided:** Auth0 with a Google Workspace enterprise connection, Universal Login, Organizations, organization roles, and Auth for MCP.
+3. **Google access policy — configuration needed:** supply the allowed Workspace domain. Default: invitation and matching Workspace identity are both required; no public signup.
+4. **Directory management — decided:** use Auth0 Google Workspace Directory Sync for users and selected groups, while organization membership remains the explicit access gate.
+5. **Tenancy — decided:** one company in the first UI; retain Auth0 Organization and database workspace boundaries so more companies can be added later.
+6. **Assignments — pending:** recommended default is one visible accountable owner plus optional collaborators, backed by the flexible assignment table.
+7. **Restaurant integration — decided:** the task platform is canonical and the restaurant Kanban reads/writes its allowed tasks directly through the REST API; no webhook/outbox initially.
+8. **Hosting boundary — decided for the foundation:** web, API, database integration, and first agent runtime stay on Vercel. A separate Pi worker requires a later explicit decision.
+9. **Agent authority — pending:** no agent mutation or run-start scope is enabled until the first actions and approval rules are approved.
+10. **Compliance and region — pending:** EU data residency, deletion, and retention requirements must be supplied before production provider selection.
+11. **Existing data — pending:** treat browser-local prototype data as demo data unless a real export must be retained.
 
-After these decisions, the first implementation pull request should contain the tested Next.js/Arc foundation, production auth/schema skeleton, and one end-to-end project/task vertical slice rather than a visual-only rewrite.
+The foundation can start once the Google Workspace domain and Auth0 tenant configuration are available. The first implementation pull request should contain the tested Next.js/Arc foundation, Auth0/schema skeleton, and one end-to-end project/task vertical slice rather than a visual-only rewrite. The agent phase remains gated on the pending authority decision.
 
 ## Primary references
 
 - Arc AI/MCP and Pro access: <https://uiarc.dev/docs/ai>
-- Better Auth Google Workspace restriction: <https://better-auth.com/docs/authentication/google>
-- Better Auth organization plugin: <https://better-auth.com/docs/plugins/organization>
-- Better Auth admin plugin: <https://better-auth.com/docs/plugins/admin>
-- Better Auth MCP and CIMD plugins: <https://better-auth.com/docs/plugins/mcp>
+- Auth0 Next.js App Router integration: <https://developer.auth0.com/resources/guides/web-app/nextjs/basic-authentication>
+- Auth0 Google Workspace enterprise connection: <https://auth0.com/docs/authenticate/identity-providers/enterprise-identity-providers/google-apps>
+- Auth0 Google Workspace Directory Sync: <https://auth0.com/docs/authenticate/identity-providers/enterprise-identity-providers/google-directory-sync>
+- Auth0 Organization invitations and member roles: <https://auth0.com/docs/manage-users/organizations/configure-organizations/invite-members>
+- Auth0 Organization roles: <https://auth0.com/docs/manage-users/organizations/organization-roles>
+- Auth0 Organization token validation: <https://auth0.com/docs/manage-users/organizations/using-tokens>
+- Auth0 Management API access tokens: <https://auth0.com/docs/secure/tokens/access-tokens/management-api-access-tokens>
+- Auth0 Auth for MCP authorization: <https://auth0.com/ai/docs/mcp/get-started/authorization-for-your-mcp-server>
+- Auth0 MCP resource-parameter profile: <https://auth0.com/ai/docs/mcp/guides/resource-param-compatibility-profile>
+- Auth0 manual CIMD registration: <https://auth0.com/ai/docs/mcp/guides/registering-your-mcp-client-application/manual-cimd-registration>
 - Next.js route handlers: <https://nextjs.org/docs/app/getting-started/route-handlers>
 - Vercel Workflows: <https://vercel.com/docs/workflows>
-- Vercel Queues: <https://vercel.com/docs/queues>
 - Vercel `WorkflowAgent`: <https://vercel.com/kb/guide/what-is-workflowagent>
 - Vercel AI SDK harnesses, including Pi: <https://vercel.com/changelog/program-agent-harnesses-with-ai-sdk>
 - MCP `2026-07-28` authorization specification: <https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization>
