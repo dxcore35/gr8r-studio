@@ -1,6 +1,11 @@
 node_modules/
 dist/
+.next/
+out/
 .vercel/
+playwright-report/
+test-results/
+*.tsbuildinfo
 .DS_Store
 __MACOSX/
 *.log

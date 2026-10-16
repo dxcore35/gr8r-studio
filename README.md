@@ -1,82 +1,64 @@
 # Gr8r Studio
 
-A calm, structured project management workspace: home dashboard, inbox, my tasks, projects with
-board / list / table / calendar / timeline / files views, members, teams, activity and settings.
+Gr8r Studio is becoming a shared task workspace for people, connected business systems, and agents. The current production slice rebuilds the focused **My tasks** journey with Next.js, TypeScript, and licensed Arc components while preserving the original prototype as a behavioral reference.
 
-Built with plain JavaScript ES modules and CSS, bundled by [Vite](https://vite.dev). There is no
-UI framework and no runtime dependency.
+## Current UI slice
 
-![Gr8r Studio home dashboard](docs/preview.png)
+- Responsive workspace shell with desktop rail and mobile navigation sheet
+- Focused task list with sorting and task filters
+- Complete and reopen interactions through a typed task gateway
+- Loading, empty, error, retry, and filtered-empty states
+- Light and dark themes
+- Deterministic restaurant-operations fixtures for UI development
+- Automated functional, responsive, reduced-motion, and WCAG A/AA checks
+
+The task data is still simulated. The `TaskGateway` boundary is the integration seam for the future API; authentication, user management, projects, restaurant sync, and agent execution are planned but not wired in this slice.
+
+## Stack
+
+- Next.js App Router and React
+- TypeScript
+- Arc foundation, components, and Pro sidebar source supplied through the authenticated UIarc MCP connection
+- CSS Modules and semantic Arc tokens
+- Playwright and axe-core
 
 ## Getting started
 
-Requires Node.js 18 or newer (`.nvmrc` pins 22).
+Requires Node.js 20.9 or newer (`.nvmrc` pins Node.js 22).
 
 ```bash
 npm install
-npm run dev       # http://localhost:5173 with hot reload
-npm run build     # production build in dist/
-npm run preview   # serve the production build locally
-npm run lint      # ESLint
-npm run format    # Prettier
+npm run dev       # http://localhost:3000
+npm run build     # production build
+npm run start     # serve the production build
+npm run typecheck
+npm run lint
+npm run format:check
+npm run test:e2e
 ```
+
+Open `/my-tasks`. In development, use the **Preview state** control or one of these URLs:
+
+- `/my-tasks?scenario=populated`
+- `/my-tasks?scenario=empty`
+- `/my-tasks?scenario=loading`
+- `/my-tasks?scenario=error`
 
 ## Project structure
 
-```
-index.html              HTML entry; loads src/main.js
-public/favicon.svg      brand mark
-vite.config.js          Vite config, including the Lucide icon-subset plugin
-eslint.config.js        lint rules (ESLint flat config); formatting by Prettier (.prettierrc.json)
-.github/workflows/      CI: lint, format check, build
-docs/preview.png        README screenshot
-src/
-  main.js               entry: imports styles and modules, then boots the app
-  styles/
-    index.css           imports every stylesheet in cascade order
-    tokens.css          colours, spacing, type, radius, the shared --gutter
-    base.css  components.css  shell.css  panels.css  overlays.css  states.css  motion.css  responsive.css
-    views/              list, board, table, calendar, timeline, projects & files
-    pages/              settings, auth & onboarding
-  core/                 utilities, constants, icons, store (state + lookups), theme
-  data/seed.js          demo workspace data
-  ui/                   shared render helpers, toasts, the select dropdown
-  shell/                render loop and router, sidebar/topbar layout, skeletons, view engine
-  components/           task list renderer
-  pages/                one module per route
-  views/                project views: board, table, calendar, timeline, files, overview
-  overlays/             task drawer, modals, popovers, context menu, command palette
-  features/             teams, subtasks, archive (rendering)
-  actions/              user actions, event wiring, keyboard shortcuts, drag and drop
+```text
+src/app/                         Next.js routes and screen composition
+src/app/my-tasks/_components/    Focused My tasks UI
+src/components/arc/              Installed Arc foundation and components
+src/components/theme-toggle/     Product-level theme control
+src/features/tasks/              Task types, fixtures, and gateway boundary
+tests/e2e/                        Playwright behavior and accessibility tests
+docs/agentic-platform-plan.md     Product and platform delivery plan
+design-system/gr8r-studio/        Design-system source of truth
 ```
 
-### Layers
+The legacy Vite implementation remains under the existing JavaScript folders for reference. Next.js only registers `.ts` and `.tsx` routes, so those files are not part of the production application.
 
-Dependencies point downward:
+## Deployment
 
-1. `core/` and `data/` depend on nothing else in the app.
-2. `ui/`, `shell/`, `components/`, `pages/`, `views/`, `overlays/` and `features/` render HTML from state.
-3. `actions/` change state and re-render. Each action module registers its handlers on the
-   shared action table (`A`) when it loads, so `main.js` imports them after `actions/actions.js`.
-
-## Conventions
-
-- **Rendering:** each page or view is a function that returns an HTML string from the store
-  (`S`). `render()` rebuilds the shell and keeps focus and scroll positions.
-- **Interactions:** elements declare `data-a="actionName"`. `actions/events.js` delegates the
-  click to `A.actionName`. Inputs use `data-in`, blur handlers use `data-blur`.
-- **Layout:** every page edge uses `var(--gutter)`, so the breadcrumb, page header, toolbar,
-  list, table and board start on the same line.
-- **Dropdowns:** write a normal `<select class="select">`. `ui/select.js` renders it as the
-  design-system menu and keeps the native element as the source of truth.
-- **Icons:** call `ic('name')` with any [Lucide](https://lucide.dev) icon name. The
-  `virtual:icons` plugin bundles only the icons the source uses.
-
-## Continuous integration
-
-Every push and pull request runs lint, the format check and a production build
-(`.github/workflows/ci.yml`).
-
-## Deploy
-
-`vercel.json` builds with Vite and serves `dist/`.
+`vercel.json` selects the native Next.js build on Vercel. No production secrets or authentication configuration are required for this fixture-backed UI slice.
