@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import { Geist, Inter } from 'next/font/google';
-import '@/components/arc/foundation.css';
-import './globals.css';
+import type { CSSProperties } from 'react';
+import { Geist, Geist_Mono } from 'next/font/google';
+import '@/styles/index.css';
 
 const geist = Geist({
   variable: '--font-geist',
   subsets: ['latin'],
 });
 
-const inter = Inter({
-  variable: '--font-inter',
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
   subsets: ['latin'],
 });
 
@@ -23,8 +23,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-theme="light" data-accent="blue" suppressHydrationWarning>
-      <body className={`${geist.variable} ${inter.variable}`}>{children}</body>
+    <html
+      lang="en"
+      className={`${geist.variable} ${geistMono.variable}`}
+      style={{ '--font': 'var(--font-geist)', '--mono': 'var(--font-geist-mono)' } as CSSProperties}
+      suppressHydrationWarning
+    >
+      <body>{children}</body>
     </html>
   );
 }

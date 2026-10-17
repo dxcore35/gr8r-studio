@@ -1,6 +1,5 @@
 import type { Task, TaskGatewayError, TaskGroup, TaskGroupId, TaskListData, TaskListScenario, TaskListState } from './types';
-
-export const TASK_FIXTURE_TODAY = '2026-10-16';
+import { offsetDate, todayDate } from './date';
 
 const GROUP_LABELS: Readonly<Record<TaskGroupId, string>> = {
   overdue: 'Overdue',
@@ -27,71 +26,73 @@ const currentUser = {
   initials: 'MI',
 } as const;
 
-const populatedTasks: Readonly<Record<TaskGroupId, readonly Task[]>> = {
-  overdue: [
-    {
-      id: 'task-confirm-weekend-rota',
-      key: 'OPS-142',
-      title: 'Confirm the weekend rota',
-      description: 'Resolve the two remaining shift gaps before publishing.',
-      project: restaurantProject,
-      assignee: currentUser,
-      status: 'in_progress',
-      priority: 'high',
-      dueDate: '2026-10-15',
-    },
-  ],
-  today: [
-    {
-      id: 'task-review-supplier-delivery',
-      key: 'OPS-147',
-      title: 'Review the produce delivery',
-      description: 'Record shortages and approve the supplier invoice.',
-      project: restaurantProject,
-      assignee: currentUser,
-      status: 'todo',
-      priority: 'medium',
-      dueDate: TASK_FIXTURE_TODAY,
-    },
-    {
-      id: 'task-approve-menu-copy',
-      key: 'WEB-38',
-      title: 'Approve the autumn menu copy',
-      description: 'Check allergen wording before the website update is published.',
-      project: websiteProject,
-      assignee: currentUser,
-      status: 'todo',
-      priority: 'low',
-      dueDate: TASK_FIXTURE_TODAY,
-    },
-  ],
-  upcoming: [
-    {
-      id: 'task-plan-private-event',
-      key: 'OPS-153',
-      title: "Plan Friday's private event",
-      description: 'Confirm the room layout, staffing, and final guest count.',
-      project: restaurantProject,
-      assignee: currentUser,
-      status: 'todo',
-      priority: 'medium',
-      dueDate: '2026-10-20',
-    },
-  ],
-  completed: [
-    {
-      id: 'task-send-daily-brief',
-      key: 'OPS-139',
-      title: 'Send the daily operations brief',
-      description: "Share today's covers, events, and operational notes.",
-      project: restaurantProject,
-      assignee: currentUser,
-      status: 'done',
-      priority: 'low',
-      dueDate: '2026-10-16',
-    },
-  ],
-};
+function populatedTasks(today: string): Readonly<Record<TaskGroupId, readonly Task[]>> {
+  return {
+    overdue: [
+      {
+        id: 'task-confirm-weekend-rota',
+        key: 'OPS-142',
+        title: 'Confirm the weekend rota',
+        description: 'Resolve the two remaining shift gaps before publishing.',
+        project: restaurantProject,
+        assignee: currentUser,
+        status: 'in_progress',
+        priority: 'high',
+        dueDate: offsetDate(today, -1),
+      },
+    ],
+    today: [
+      {
+        id: 'task-review-supplier-delivery',
+        key: 'OPS-147',
+        title: 'Review the produce delivery',
+        description: 'Record shortages and approve the supplier invoice.',
+        project: restaurantProject,
+        assignee: currentUser,
+        status: 'todo',
+        priority: 'medium',
+        dueDate: today,
+      },
+      {
+        id: 'task-approve-menu-copy',
+        key: 'WEB-38',
+        title: 'Approve the autumn menu copy',
+        description: 'Check allergen wording before the website update is published.',
+        project: websiteProject,
+        assignee: currentUser,
+        status: 'todo',
+        priority: 'low',
+        dueDate: today,
+      },
+    ],
+    upcoming: [
+      {
+        id: 'task-plan-private-event',
+        key: 'OPS-153',
+        title: "Plan Friday's private event",
+        description: 'Confirm the room layout, staffing, and final guest count.',
+        project: restaurantProject,
+        assignee: currentUser,
+        status: 'todo',
+        priority: 'medium',
+        dueDate: offsetDate(today, 4),
+      },
+    ],
+    completed: [
+      {
+        id: 'task-send-daily-brief',
+        key: 'OPS-139',
+        title: 'Send the daily operations brief',
+        description: "Share today's covers, events, and operational notes.",
+        project: restaurantProject,
+        assignee: currentUser,
+        status: 'done',
+        priority: 'low',
+        dueDate: today,
+      },
+    ],
+  };
+}
 
 function cloneTask(task: Task): Task {
   return {
@@ -120,8 +121,8 @@ export function summarizeTaskGroups(groups: readonly TaskGroup[]): TaskListData[
   };
 }
 
-export function createPopulatedTaskListFixture(): TaskListData {
-  const groups = buildGroups(populatedTasks);
+export function createPopulatedTaskListFixture(today = todayDate()): TaskListData {
+  const groups = buildGroups(populatedTasks(today));
   return { groups, summary: summarizeTaskGroups(groups) };
 }
 
@@ -134,7 +135,12 @@ export function createUnavailableTaskError(operation: TaskGatewayError['operatio
   return {
     code: 'unavailable',
     operation,
-    message: operation === 'list_my_tasks' ? 'Tasks could not be loaded. Try again.' : 'The task could not be updated. Try again.',
+    message:
+      operation === 'list_my_tasks'
+        ? 'Tasks could not be loaded. Try again.'
+        : operation === 'create_task'
+          ? 'The task could not be created. Try again.'
+          : 'The task could not be updated. Try again.',
     retryable: true,
   };
 }
@@ -144,7 +150,7 @@ export function createUnavailableTaskError(operation: TaskGatewayError['operatio
  * Loading is intentionally owned by the UI rather than simulated by a Promise
  * that never settles.
  */
-export function createTaskListStateFixture(scenario: TaskListScenario): TaskListState {
+export function createTaskListStateFixture(scenario: TaskListScenario, today = todayDate()): TaskListState {
   switch (scenario) {
     case 'loading':
       return { status: 'loading' };
@@ -153,6 +159,6 @@ export function createTaskListStateFixture(scenario: TaskListScenario): TaskList
     case 'error':
       return { status: 'error', error: createUnavailableTaskError() };
     case 'populated':
-      return { status: 'ready', data: createPopulatedTaskListFixture() };
+      return { status: 'ready', data: createPopulatedTaskListFixture(today) };
   }
 }

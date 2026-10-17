@@ -1,0 +1,415 @@
+{
+  "tokens": {
+    "color": {
+      "bg": {
+        "value": "#fbfaf8",
+        "source": "css-custom-property",
+        "alternatives": ["#1a1a19", "#1a1a19"]
+      },
+      "bg-side": {
+        "value": "#f4f3f0",
+        "source": "css-custom-property",
+        "alternatives": ["#151514", "#151514"]
+      },
+      "surface": {
+        "value": "#ffffff",
+        "source": "css-custom-property",
+        "alternatives": ["#1d1d1c", "#1d1d1c"]
+      },
+      "surface-2": {
+        "value": "#f6f5f2",
+        "source": "css-custom-property",
+        "alternatives": ["#252524", "#252524"]
+      },
+      "surface-3": {
+        "value": "#eeede9",
+        "source": "css-custom-property",
+        "alternatives": ["#2d2d2b", "#2d2d2b"]
+      },
+      "border": {
+        "value": "#e9e7e2",
+        "source": "css-custom-property",
+        "alternatives": ["#2c2b29", "#2c2b29"]
+      },
+      "border-strong": {
+        "value": "#dad7d0",
+        "source": "css-custom-property",
+        "alternatives": ["#3a3936", "#3a3936"]
+      },
+      "text": {
+        "value": "#1d1c1a",
+        "source": "css-custom-property",
+        "alternatives": ["#eceae5", "#eceae5"]
+      },
+      "text-2": {
+        "value": "#57544e",
+        "source": "css-custom-property",
+        "alternatives": ["#b5b2ab", "#b5b2ab"]
+      },
+      "text-3": {
+        "value": "#6b6760",
+        "source": "css-custom-property",
+        "alternatives": ["#9a968f", "#9a968f"]
+      },
+      "text-4": {
+        "value": "#8c8880",
+        "source": "css-custom-property",
+        "alternatives": ["#6f6c66", "#6f6c66"]
+      },
+      "text-inv": {
+        "value": "#ffffff",
+        "source": "css-custom-property",
+        "alternatives": ["#151514", "#151514"]
+      },
+      "accent": {
+        "value": "var(--acc-l)",
+        "source": "css-custom-property",
+        "alternatives": ["var(--acc-d)", "var(--acc-d)"]
+      },
+      "on-accent": {
+        "value": "#ffffff",
+        "source": "css-custom-property",
+        "alternatives": ["#12131c", "#12131c"]
+      },
+      "accent-soft": {
+        "value": "color-mix(in srgb, var(--accent) 10%, transparent)",
+        "source": "css-custom-property"
+      },
+      "accent-line": {
+        "value": "color-mix(in srgb, var(--accent) 38%, transparent)",
+        "source": "css-custom-property"
+      },
+      "spring": {
+        "value": "cubic-bezier(.34, 1.56, .64, 1)",
+        "source": "css-custom-property"
+      }
+    },
+    "other": {
+      "sunken": {
+        "value": "#f7f6f3",
+        "source": "css-custom-property",
+        "alternatives": ["#181817", "#181817"]
+      },
+      "overlay": {
+        "value": "rgba(24, 22, 19, .28)",
+        "source": "css-custom-property",
+        "alternatives": ["rgba(0, 0, 0, .55)", "rgba(0, 0, 0, .55)"]
+      },
+      "divider": {
+        "value": "#f0eeea",
+        "source": "css-custom-property",
+        "alternatives": ["#252523", "#252523"]
+      },
+      "acc-l": {
+        "value": "#4b5bd6",
+        "source": "css-custom-property",
+        "alternatives": ["#2f6cd4", "#7348cc", "#1a7f7a", "#b93d68", "#34332f"]
+      },
+      "acc-d": {
+        "value": "#8e9af3",
+        "source": "css-custom-property",
+        "alternatives": ["#74a7f0", "#ae93f0", "#5cc4ba", "#ec8dae", "#d9d6cf"]
+      },
+      "green": {
+        "value": "#25754b",
+        "source": "css-custom-property",
+        "alternatives": ["#5cba86", "#5cba86"]
+      },
+      "amber": {
+        "value": "#8f5e0e",
+        "source": "css-custom-property",
+        "alternatives": ["#d8a443", "#d8a443"]
+      },
+      "red": {
+        "value": "#b23c30",
+        "source": "css-custom-property",
+        "alternatives": ["#e57d70", "#e57d70"]
+      },
+      "blue": {
+        "value": "#3570c4",
+        "source": "css-custom-property",
+        "alternatives": ["#72a5ea", "#72a5ea"]
+      },
+      "violet": {
+        "value": "#7652c2",
+        "source": "css-custom-property",
+        "alternatives": ["#a98deb", "#a98deb"]
+      },
+      "teal": {
+        "value": "#1e8580",
+        "source": "css-custom-property",
+        "alternatives": ["#58c0b6", "#58c0b6"]
+      },
+      "rose": {
+        "value": "#bc4270",
+        "source": "css-custom-property",
+        "alternatives": ["#e68aab", "#e68aab"]
+      },
+      "orange": {
+        "value": "#c0612b",
+        "source": "css-custom-property",
+        "alternatives": ["#e3925f", "#e3925f"]
+      },
+      "gray": {
+        "value": "#8a867e",
+        "source": "css-custom-property",
+        "alternatives": ["#8f8b84", "#8f8b84"]
+      },
+      "green-soft": {
+        "value": "color-mix(in srgb, var(--green) 11%, transparent)",
+        "source": "css-custom-property"
+      },
+      "amber-soft": {
+        "value": "color-mix(in srgb, var(--amber) 12%, transparent)",
+        "source": "css-custom-property"
+      },
+      "red-soft": {
+        "value": "color-mix(in srgb, var(--red) 10%, transparent)",
+        "source": "css-custom-property"
+      },
+      "st-backlog": {
+        "value": "#a29e96",
+        "source": "css-custom-property",
+        "alternatives": ["#6f6c66", "#6f6c66"]
+      },
+      "st-todo": {
+        "value": "#7c7870",
+        "source": "css-custom-property",
+        "alternatives": ["#a6a39c", "#a6a39c"]
+      },
+      "st-progress": {
+        "value": "#c88a14",
+        "source": "css-custom-property",
+        "alternatives": ["#d8a443", "#d8a443"]
+      },
+      "st-review": {
+        "value": "#7652c2",
+        "source": "css-custom-property",
+        "alternatives": ["#a98deb", "#a98deb"]
+      },
+      "st-done": {
+        "value": "#2e8456",
+        "source": "css-custom-property",
+        "alternatives": ["#5cba86", "#5cba86"]
+      },
+      "r-xs": {
+        "value": "4px",
+        "source": "css-custom-property"
+      },
+      "r-sm": {
+        "value": "6px",
+        "source": "css-custom-property"
+      },
+      "r": {
+        "value": "8px",
+        "source": "css-custom-property"
+      },
+      "r-lg": {
+        "value": "10px",
+        "source": "css-custom-property"
+      },
+      "r-full": {
+        "value": "999px",
+        "source": "css-custom-property"
+      },
+      "s-1": {
+        "value": "4px",
+        "source": "css-custom-property"
+      },
+      "s-2": {
+        "value": "8px",
+        "source": "css-custom-property"
+      },
+      "s-3": {
+        "value": "12px",
+        "source": "css-custom-property"
+      },
+      "s-4": {
+        "value": "16px",
+        "source": "css-custom-property"
+      },
+      "s-5": {
+        "value": "20px",
+        "source": "css-custom-property"
+      },
+      "s-6": {
+        "value": "24px",
+        "source": "css-custom-property"
+      },
+      "s-8": {
+        "value": "32px",
+        "source": "css-custom-property"
+      },
+      "s-10": {
+        "value": "40px",
+        "source": "css-custom-property"
+      },
+      "s-12": {
+        "value": "48px",
+        "source": "css-custom-property"
+      },
+      "mono": {
+        "value": "\"Geist Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+        "source": "css-custom-property"
+      },
+      "fs-2xs": {
+        "value": "11px",
+        "source": "css-custom-property"
+      },
+      "fs-xs": {
+        "value": "12px",
+        "source": "css-custom-property"
+      },
+      "fs-sm": {
+        "value": "12.5px",
+        "source": "css-custom-property"
+      },
+      "fs": {
+        "value": "13.5px",
+        "source": "css-custom-property"
+      },
+      "fs-md": {
+        "value": "14.5px",
+        "source": "css-custom-property"
+      },
+      "fs-lg": {
+        "value": "16px",
+        "source": "css-custom-property"
+      },
+      "fs-xl": {
+        "value": "19px",
+        "source": "css-custom-property"
+      },
+      "fs-2xl": {
+        "value": "23px",
+        "source": "css-custom-property"
+      },
+      "h-xs": {
+        "value": "22px",
+        "source": "css-custom-property"
+      },
+      "h-sm": {
+        "value": "26px",
+        "source": "css-custom-property"
+      },
+      "h-md": {
+        "value": "30px",
+        "source": "css-custom-property"
+      },
+      "h-lg": {
+        "value": "36px",
+        "source": "css-custom-property"
+      },
+      "side-w": {
+        "value": "252px",
+        "source": "css-custom-property"
+      },
+      "side-row": {
+        "value": "30px",
+        "source": "css-custom-property",
+        "alternatives": ["26px"]
+      },
+      "row-h": {
+        "value": "40px",
+        "source": "css-custom-property",
+        "alternatives": ["34px"]
+      },
+      "card-pad": {
+        "value": "10px",
+        "source": "css-custom-property",
+        "alternatives": ["8px"]
+      },
+      "topbar-h": {
+        "value": "46px",
+        "source": "css-custom-property",
+        "alternatives": ["50px"]
+      },
+      "gutter": {
+        "value": "24px",
+        "source": "css-custom-property",
+        "alternatives": ["16px"]
+      },
+      "dur": {
+        "value": ".14s",
+        "source": "css-custom-property"
+      },
+      "pc-mix": {
+        "value": "72%",
+        "source": "css-custom-property"
+      },
+      "h": {
+        "value": "var(--h-md)",
+        "source": "css-custom-property",
+        "alternatives": ["var(--h-sm)", "var(--h-lg)"]
+      },
+      "sz": {
+        "value": "22px",
+        "source": "css-custom-property",
+        "alternatives": ["20px", "26px", "36px", "64px", "16px", "28px", "36px"]
+      },
+      "c": {
+        "value": "var(--gray)",
+        "source": "css-custom-property"
+      },
+      "pc": {
+        "value": "color-mix(in srgb, var(--c) var(--pc-mix, 100%), var(--text))",
+        "source": "css-custom-property"
+      },
+      "reduce": {
+        "value": "1",
+        "source": "css-custom-property"
+      }
+    },
+    "shadow": {
+      "shadow-sm": {
+        "value": "0 1px 2px rgba(28, 25, 20, .05)",
+        "source": "css-custom-property",
+        "alternatives": ["0 1px 2px rgba(0, 0, 0, .3)", "0 1px 2px rgba(0, 0, 0, .3)"]
+      },
+      "shadow-card": {
+        "value": "0 1px 2px rgba(28, 25, 20, .04), 0 0 0 1px var(--border)",
+        "source": "css-custom-property",
+        "alternatives": ["0 0 0 1px var(--border)", "0 0 0 1px var(--border)"]
+      },
+      "shadow-pop": {
+        "value": "0 12px 32px -8px rgba(28, 25, 20, .16), 0 2px 6px -2px rgba(28, 25, 20, .06), 0 0 0 1px var(--border)",
+        "source": "css-custom-property",
+        "alternatives": [
+          "0 16px 40px -10px rgba(0, 0, 0, .6), 0 0 0 1px var(--border-strong)",
+          "0 16px 40px -10px rgba(0, 0, 0, .6), 0 0 0 1px var(--border-strong)"
+        ]
+      },
+      "shadow-drag": {
+        "value": "0 16px 36px -10px rgba(28, 25, 20, .28), 0 0 0 1px var(--border-strong)",
+        "source": "css-custom-property",
+        "alternatives": [
+          "0 18px 40px -10px rgba(0, 0, 0, .7), 0 0 0 1px var(--border-strong)",
+          "0 18px 40px -10px rgba(0, 0, 0, .7), 0 0 0 1px var(--border-strong)"
+        ]
+      }
+    },
+    "typography": {
+      "font": {
+        "value": "\"Geist\", ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "source": "css-custom-property"
+      }
+    },
+    "duration": {
+      "ease": {
+        "value": "cubic-bezier(.23, 1, .32, 1)",
+        "source": "css-custom-property"
+      },
+      "ease-drawer": {
+        "value": "cubic-bezier(.32, .72, 0, 1)",
+        "source": "css-custom-property"
+      }
+    }
+  },
+  "_meta": {
+    "source_url": "https://gr8r-taskmanagement.vercel.app/",
+    "stylesheet_count": 1,
+    "stylesheets": ["https://gr8r-taskmanagement.vercel.app/assets/index-BAaun9PB.css"],
+    "total_variables": 86,
+    "note": "These are explicit CSS custom properties extracted from the site's stylesheets. Treat them as ✅ high-confidence tokens — the authors named them deliberately. Categories are heuristic; review before using."
+  }
+}

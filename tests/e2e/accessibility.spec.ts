@@ -14,11 +14,14 @@ async function expectNoWcagViolations(page: Page) {
 
 test('the populated task view has no automated WCAG A or AA violations', async ({ page }) => {
   await page.goto('/my-tasks?scenario=populated');
+  await expect(page.locator('#app')).toHaveAttribute('data-hydrated', 'true');
   await expect(page.getByRole('table', { name: 'Tasks assigned to Mara Ionescu' })).toBeVisible();
 
   await expectNoWcagViolations(page);
 
-  await page.getByRole('button', { name: 'Use dark theme' }).click();
+  await page.getByRole('button', { name: 'Account menu' }).click();
+  await page.getByRole('menu', { name: 'account menu' }).getByRole('menuitemradio', { name: 'Dark', exact: true }).click();
+  await page.keyboard.press('Escape');
   await page.evaluate(() => {
     document.documentElement.dataset.accent = 'neutral';
   });
@@ -31,11 +34,13 @@ test.describe('mobile accessibility', () => {
 
   test('the task view and open navigation sheet have no automated WCAG A or AA violations', async ({ page }) => {
     await page.goto('/my-tasks?scenario=populated');
-    await expect(page.getByRole('heading', { level: 1, name: 'My tasks' })).toBeVisible();
+    await expect(page.locator('#app')).toHaveAttribute('data-hydrated', 'true');
+    await expect(page.getByRole('heading', { level: 1, name: 'My Tasks' })).toBeVisible();
     await expectNoWcagViolations(page);
 
     await page.getByRole('button', { name: 'Open navigation' }).click();
-    await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible();
+    await expect(page.locator('.shell')).toHaveClass(/mnav/);
+    await expect(page.getByRole('navigation', { name: 'Main' })).not.toHaveAttribute('inert', '');
     await expectNoWcagViolations(page);
   });
 });

@@ -1,4 +1,4 @@
-import type { Result, Task, TaskGatewayError, TaskId, TaskListData } from './types';
+import type { CreateTaskInput, Result, Task, TaskGatewayError, TaskId, TaskListData, UpdateTaskInput } from './types';
 
 /**
  * Browser-facing task boundary.
@@ -8,6 +8,8 @@ import type { Result, Task, TaskGatewayError, TaskId, TaskListData } from './typ
  */
 export interface TaskGateway {
   listMyTasks(): Promise<Result<TaskListData, TaskGatewayError>>;
+  createTask(input: CreateTaskInput): Promise<Result<Task, TaskGatewayError>>;
+  updateTask(taskId: TaskId, input: UpdateTaskInput): Promise<Result<Task, TaskGatewayError>>;
   completeTask(taskId: TaskId): Promise<Result<Task, TaskGatewayError>>;
   reopenTask(taskId: TaskId): Promise<Result<Task, TaskGatewayError>>;
 }

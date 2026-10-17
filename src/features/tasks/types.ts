@@ -25,6 +25,17 @@ export interface Task {
   readonly dueDate: string | null;
 }
 
+export interface CreateTaskInput {
+  readonly title: string;
+  readonly dueDate: string | null;
+  readonly description?: string;
+  readonly status?: TaskStatus;
+  readonly priority?: TaskPriority;
+  readonly project?: Task['project'];
+}
+
+export type UpdateTaskInput = Partial<Pick<Task, 'title' | 'description' | 'project' | 'status' | 'priority' | 'dueDate'>>;
+
 export interface TaskGroup {
   readonly id: TaskGroupId;
   readonly label: string;
@@ -41,7 +52,7 @@ export interface TaskListData {
   };
 }
 
-export type TaskGatewayOperation = 'list_my_tasks' | 'complete_task' | 'reopen_task';
+export type TaskGatewayOperation = 'list_my_tasks' | 'create_task' | 'update_task' | 'complete_task' | 'reopen_task';
 
 export type TaskGatewayErrorCode = 'not_found' | 'unavailable';
 

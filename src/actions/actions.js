@@ -54,6 +54,9 @@ export function createTask(f) {
   );
   t.id = f.id || uid('t');
   t.key = f.key || nextKey(p);
+  t.gateway = true;
+  const assigned = mem(t.assignee || D().me) || me();
+  t.assignee = assigned.id;
   D().tasks.push(t);
   fxSet({ added: t.id });
   logAct('created', t);

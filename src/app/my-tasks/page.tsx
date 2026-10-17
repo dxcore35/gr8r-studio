@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { SidebarRail } from '@/components/arc/blocks/sidebar-rail/sidebar-rail';
-import { ThemeToggle } from '@/components/theme-toggle/theme-toggle';
+import { Gr8rShell } from '@/components/gr8r-shell/gr8r-shell';
 import type { TaskListScenario } from '@/features/tasks';
 import { MyTasksView } from './_components/my-tasks-view';
 
@@ -23,21 +22,8 @@ export default async function MyTasksPage({ searchParams }: MyTasksPageProps) {
   const scenario = isScenario(params.scenario) ? params.scenario : 'populated';
 
   return (
-    <>
-      <a className="skip-link" href="#main-content">
-        Skip to tasks
-      </a>
-      <SidebarRail
-        activeId="my-tasks"
-        pageTitle="My tasks"
-        topbarActions={<ThemeToggle />}
-        userName="Mara Ionescu"
-        userRole="Workspace owner"
-        workspaceDetail="Operations"
-        workspaceName="Janom"
-      >
-        <MyTasksView key={scenario} scenario={scenario} showScenarioPicker={process.env.NODE_ENV !== 'production'} />
-      </SidebarRail>
-    </>
+    <Gr8rShell>
+      <MyTasksView key={scenario} scenario={scenario} />
+    </Gr8rShell>
   );
 }

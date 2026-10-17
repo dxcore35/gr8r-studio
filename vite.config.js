@@ -47,7 +47,22 @@ function lucideSubset() {
   };
 }
 
+function upstreamAssets() {
+  return {
+    name: 'upstream-assets',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'favicon.svg', source: fs.readFileSync(path.resolve('public/favicon.svg')) });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [lucideSubset()],
+  base: '/upstream/',
+  publicDir: false,
+  build: {
+    emptyOutDir: true,
+    outDir: 'public/upstream',
+  },
+  plugins: [lucideSubset(), upstreamAssets()],
   server: { port: 5173 },
 });

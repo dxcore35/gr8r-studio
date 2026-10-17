@@ -4,8 +4,10 @@
   "private": true,
   "description": "Gr8r Studio: a calm, structured project management workspace.",
   "scripts": {
+    "predev": "npm run build:upstream",
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build:upstream": "vite build",
+    "build": "npm run build:upstream && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -33,7 +35,9 @@
     "@types/react-dom": "^19.2.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.2",
+    "lucide": "^0.460.0",
     "prettier": "^3.9.9",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^6.4.4"
   }
 }
